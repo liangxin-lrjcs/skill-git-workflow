@@ -318,6 +318,159 @@ bitbake -c clean spcam              # 同上
 
 ---
 
+## 拉取远端最新代码（Pull + Rebase 工作流）
+
+> 场景：远端有新提交（同事推了代码），你本地有 WIP 修改，需要把远端最新变更合并进来。
+
+### Step 0：确认是否要在当前分支操作还是新建分支
+
+**必须先询问用户！** 不同场景有不同推荐：
+
+| 场景 | 建议 |
+|------|------|
+| feature 分支时间较长、远端变化大 | **推荐**：基于最新 main 新建分支，cherry-pick 自己的提交 |
+| 小改动、仅有 1-2 个文件冲突 | **可以**：直接在当前分支 rebase |
+| 远端强更新（别人 force push 了 main） | **必须**：reset 到远端，重新 cherry-pick 自己的提交 |
+
+```
+[询问用户]：
+"远端有新提交，你的本地也有修改。建议方案：
+  A) 在当前分支直接 rebase（适合冲突少的情况）
+  B) 新建分支 feature/MMDD-HHMM，基于最新 main 重新开始（适合差异较大的情况）
+  你更倾向哪种方式？"
+```
+
+---
+
+### Step 1：保存本地 WIP（git stash）
+
+```bash
+# 查看当前未提交修改
+git status
+git diff --stat
+
+# 暂存所有修改（含未 stage 的文件）
+git stash push -m "WIP: <当前工作描述>"
+
+# 确认 stash 成功
+git status   # 应该显示 clean working tree
+git stash list
+```
+
+---
+
+### Step 2：获取远端最新代码（dry-run 先看看差异）
+
+```bash
+# 先 fetch，不合并（dry-run，只查看）
+git fetch origin
+
+# 查看与远端 main 的差异（不执行合并）
+git log HEAD..origin/main --oneline    # 远端有哪些新提交
+git diff HEAD origin/main --stat       # 新提交改了哪些文件
+```
+
+**在 dry-run 结果出来后，报告给用户**：
+- 远端有 N 个新提交
+- 涉及的文件列表
+- 是否与当前 stash 的文件有重叠（重叠 = 后续 pop 时可能再次冲突）
+
+---
+
+### Step 3：执行 Rebase
+
+```bash
+# 方案 A：直接 rebase 到远端 main
+git rebase origin/main
+
+# 方案 B：新建分支（如用户选择 B 路）
+git checkout origin/main -b feature/$(date +%m%d-%H%M)
+```
+
+---
+
+### Step 4：逐个解决 Rebase 冲突（关键步骤，必须与用户协同）
+
+```bash
+# 查看当前冲突文件
+git status    # 显示 "both modified"
+
+# 查看具体冲突内容（每个文件都要看，汇报给用户）
+git diff <conflict-file>
+```
+
+**冲突处理原则（必须先给用户看，让用户评估）：**
+
+```
+对每个冲突文件，向用户报告：
+1. 文件名
+2. 冲突的代码块（<<<<<<< HEAD ... ======= ... >>>>>>> origin/main）
+3. 解释：<<<<<<< HEAD 是本地的，>>>>>>> origin/main 是远端的
+4. 提出建议（但由用户做最终决定）：
+   - 两边独立功能 → 两边都保留
+   - 同一行被双方修改 → 合并语义（不是简单选一方）
+   - 远端新增了新函数，本地也新增了新函数 → 全部保留
+   - 不存在"谁覆盖谁" → 除非用户明确说要丢弃某些改动
+```
+
+```bash
+# 解决完一个文件后：
+git add <resolved-file>
+
+# 继续 rebase（解决完所有冲突后）
+git rebase --continue
+
+# 如果某个 commit 解决不了，跳过（需用户确认！）
+git rebase --skip   # ⚠️ 会丢失这个提交，需用户批准
+
+# 完全放弃 rebase，回到 rebase 前状态
+git rebase --abort
+```
+
+---
+
+### Step 5：Pop stash（可能再次冲突）
+
+> ⚠️ 如果 stash 里的文件和 rebase 带来的改动有重叠，pop 时会再次冲突，需再解决一次。
+
+```bash
+git stash pop
+
+# 检查是否有冲突
+git status
+
+# 如果有冲突，按 Step 4 的流程再次与用户协同解决
+# 解决后 git add <file>（注意：stash pop 冲突不需要 git commit，直接继续工作即可）
+```
+
+---
+
+### Step 6：验证 + 编译（强制）
+
+rebase + stash pop 完成后，本地代码已经变化，**必须重新编译验证**：
+
+```bash
+# 按项目类型选择编译方式（见「编译验证」章节）
+# 确认编译通过后，再告知用户继续测试
+```
+
+---
+
+### 全流程 checklist
+
+```
+Pull + Rebase 流程进度:
+- [ ] Step 0: 询问用户：直接 rebase 还是新建分支？
+- [ ] Step 1: git stash push -m "WIP: ..." （保存本地修改）
+- [ ] Step 2: git fetch + dry-run 查看远端差异，报告给用户
+- [ ] Step 3: git rebase origin/main（或新建分支）
+- [ ] Step 4: 逐文件分析冲突，给用户报告 + 建议，等用户决策后解决
+- [ ] Step 5: git stash pop，处理 pop 冲突（如有）
+- [ ] Step 6: 重新编译验证，通过后告知用户继续测试
+```
+
+---
+
 ## 关键检查点（每次操作前）
 
 ```
