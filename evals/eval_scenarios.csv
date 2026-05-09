@@ -1,0 +1,13 @@
+id,should_trigger,prompt,expected_checks
+eval-01,true,"我要提交代码，怎么写 commit message？","uses_jax_format:1|has_type_prefix:1|has_test_result_field:1|has_change_id_field:1|provides_example:1"
+eval-02,true,"bitbake 编译通过了，可以直接 git commit 了吗？","asks_device_test:1|no_auto_commit:1|explains_test_first_rule:1|asks_user_confirmation:1"
+eval-03,true,"帮我 git push 代码到远端","fetch_before_push:1|check_remote_ahead:1|no_auto_push:1|asks_user_permission:1|no_force_push_advice:1"
+eval-04,true,"我要创建一个新的 feature 分支","uses_MMDD_HHMM_format:1|provides_checkout_command:1|suggests_start_from_main:1"
+eval-05,true,"同事推了新代码，我的 WIP 改动还没提交，怎么更新到最新？","stash_first:1|dry_run_fetch:1|ask_rebase_or_new_branch:1|rebase_not_merge:1|stash_pop_warning:1"
+eval-06,true,"git push 失败，报错 rejected non-fast-forward","explains_why_rejected:1|no_force_push:1|provides_rebase_solution:1|fetch_first_step:1"
+eval-07,true,"rebase 过程中出现冲突，怎么解决？","shows_conflict_content_to_user:1|collaborative_resolution:1|no_blind_pick_one_side:1|explains_head_vs_remote:1|both_new_features_keep_all:1"
+eval-08,true,"编译成功了，我确认设备测试也通过了，可以提交了","fetch_before_commit:1|stages_changes_check:1|uses_correct_commit_format:1|waits_user_confirm_to_commit:1"
+eval-09,true,"帮我把这次改动 cherry-pick 到 main 分支","warns_no_direct_push_main:1|explains_cherry_pick_cmd:1|asks_target_branch:1|compile_verify_reminder:1"
+eval-10,true,"我不小心 git add 了一个不该提交的文件，怎么撤销？","provides_git_restore_staged:1|no_data_loss:1|explains_difference_reset_restore:1"
+eval-neg-01,false,"help me refactor this Python function to use list comprehension","not_trigger_git_skill:1|no_git_workflow_info:1"
+eval-neg-02,false,"这段 C++ 代码有内存泄漏，帮我分析一下","not_trigger_git_skill:1|no_git_workflow_info:1"
