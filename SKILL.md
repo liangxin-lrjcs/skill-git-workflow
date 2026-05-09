@@ -208,6 +208,25 @@ adb shell "killall -9 spcam_main_server 2>/dev/null; sleep 1; systemctl start sp
 
 ## Commit 操作（仅用户确认后执行）
 
+### 第一步：commit 前必须 fetch 检查远端状态
+
+```bash
+# 先 fetch，查看远端是否有新提交
+git fetch origin
+git log HEAD..origin/$(git branch --show-current) --oneline 2>/dev/null || \
+  git log HEAD..origin/main --oneline
+```
+
+**根据 fetch 结果决策：**
+
+| 情况 | 行动 |
+|------|------|
+| 远端无新提交（日志为空） | 可以直接 commit |
+| 远端有新提交，且文件无重叠 | 先执行 Pull+Rebase 流程，再 commit |
+| 远端有新提交，且有文件重叠 | 执行 Pull+Rebase 流程（协同冲突解决），再 commit |
+
+### 第二步：执行 commit
+
 ```bash
 # 查看当前变更
 git status
@@ -230,18 +249,41 @@ git commit
 
 ## Push 操作（仅用户明确批准后执行）
 
+### 第一步：push 前必须 fetch 确认远端 HEAD 状态
+
+```bash
+# fetch 最新状态
+git fetch origin
+
+# 检查本地是否落后于远端（有输出 = 远端更新，需要先 rebase）
+git log HEAD..origin/$(git branch --show-current) --oneline 2>/dev/null
+
+# 检查本地是否领先远端（有输出 = 本地有待 push 的提交）
+git log origin/$(git branch --show-current)..HEAD --oneline 2>/dev/null
+```
+
+**根据结果决策：**
+
+| 情况 | 行动 |
+|------|------|
+| 远端无新提交（本地领先） | 可以直接 push |
+| 远端有新提交（本地落后） | 先执行 Pull+Rebase 流程，rebase 完成后再 push |
+| 两边都有新提交（diverged） | 先 Pull+Rebase，冲突解决后再 push |
+
+> **原因**：如果直接 push 而远端有新提交，push 会被拒绝（`! [rejected]`）。正确流程是先 rebase 到远端最新 HEAD，再 push——这样远端可以做 fast-forward 合并。
+
+### 第二步：执行 push
+
 ```bash
 # push 当前 feature 分支到远端
-git push origin feature/MMDD-HHMM
+BRANCH=$(git branch --show-current)
+git push origin $BRANCH
 
 # 首次 push（设置 upstream）
-git push -u origin feature/MMDD-HHMM
+git push -u origin $BRANCH
 
 # 查看远端分支列表
 git branch -r
-
-# 跟踪远端变化（不合并）
-git fetch --all
 ```
 
 ---
@@ -474,10 +516,16 @@ Pull + Rebase 流程进度:
 ## 关键检查点（每次操作前）
 
 ```
-Git 操作前自查:
-- [ ] 当前在 feature 分支，不在 main? (git branch)
-- [ ] Docker 编译已通过? (bitbake 返回 0)
-- [ ] 用户已确认设备测试通过? (测试反馈)
-- [ ] 用户明确说"可以提交"? (才能 commit)
-- [ ] 用户明确说"可以推送"? (才能 push)
+Commit 前自查:
+- [ ] 当前在 feature 分支，不在 main? (git branch --show-current)
+- [ ] git fetch origin 已执行，确认远端无新提交（或已 rebase 到最新）?
+- [ ] Docker/CMake 编译已通过 (返回 0)?
+- [ ] 用户已确认设备测试通过 (测试反馈)?
+- [ ] 用户明确说"可以提交"?
+
+Push 前自查:
+- [ ] git fetch origin 已执行?
+- [ ] git log HEAD..origin/<branch> 为空（本地不落后于远端）?
+- [ ] 若远端有新提交，已执行 Pull+Rebase 流程并重新编译验证?
+- [ ] 用户明确说"可以推送"?
 ```
