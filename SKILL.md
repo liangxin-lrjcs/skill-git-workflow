@@ -1,21 +1,24 @@
 ---
 name: git-workflow
 description: >
-  Manages git workflow for JAX Embedded Camera project on Qualcomm embedded Linux platform.
+  General git workflow skill for embedded/application development projects.
   Use when the user mentions git commit, git push, git pull, branch creation, feature branch,
   commit message, code review, merge, rebase, cherry-pick, stash, conflict resolution, git log,
   git diff, git status, or any version control operation. Also trigger when the user asks
   about when to commit, how to write commit messages, branch naming rules, whether to push now,
   how to create a feature branch, how to submit a patch, or how to handle git merge conflicts.
-  Special rules apply: never auto-commit or auto-push; only commit after Docker build
-  succeeds AND user confirms device test passes; never force push; never use git clean -xdf
-  on the Yocto build directory; never use cleansstate/clean on spcam.
+  Special rules apply: never auto-commit or auto-push; only commit after build succeeds AND
+  user confirms device/integration test passes; always fetch before commit or push to check
+  if remote is ahead; never force push to main; handle stash+rebase+conflict collaboratively
+  with user before merging remote changes.
 argument-hint: "[operation: commit|push|pull|branch|merge|log] [--dry-run]"
 ---
 
-# JAX Embedded Camera — Git Workflow
+# Git Workflow — 通用开发工作流
 
-本 Skill 管理 JAX 嵌入式相机项目的 Git 工作流，核心原则：**先编译、先测试、再提交，永远不自主 push**。
+本 Skill 管理嵌入式/应用开发项目的 Git 工作流，核心原则：**先编译、先测试、再提交，永远不自主 push**。
+
+> 注：编译命令、设备部署命令按实际项目而定（见「编译验证」章节），需询问用户确认当前项目类型。
 
 ---
 
