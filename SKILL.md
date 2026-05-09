@@ -191,20 +191,40 @@ bash scripts/compile.sh <module>
 
 ## 设备部署（编译 + 测试循环）
 
+> ⚠️ **部署方式因项目而异，不得自行假设。** 必须先询问用户。
+
+**询问流程：**
+
+```
+[询问用户]：
+"编译完成后需要把产物部署到设备上进行测试。请问这个项目的部署方式是什么？
+  常见选项（你也可以描述其他方式）：
+  A) adb push + opkg install（嵌入式 Linux，如 JAX/Yocto）
+  B) adb push 直接覆盖 .so / 二进制文件（Android）
+  C) scp / rsync 到远端设备（局域网 Linux）
+  D) fastboot / recovery 刷机
+  E) 本地直接运行（无需部署）
+  F) 其他（请描述）
+  
+  如果需要我查找具体命令，告诉我设备类型和产物路径，我来协助你确认。"
+```
+
+如果用户选择 **让你自主查找**，按以下步骤操作：
+
+1. 检查项目文档（README.md、AGENTS.md、docs/）中是否有部署命令
+2. 查看项目的 CI/CD 脚本（.github/workflows/ 或 Makefile deploy 目标）
+3. 从编译产物类型推断（`.ipk` → opkg，`.apk` → adb install，`.so` → adb push）
+4. 给出建议后**等用户确认**，再实际执行
+
+**参考示例（JAX/Yocto 嵌入式项目）：**
+
 ```bash
 # Push IPK 到设备并安装
 adb root && adb shell "mount -o remount,rw /"
-
-adb push \
-  /mnt/tmp/zjycode/jax/LE.PRODUCT.11.0/apps_proc/build-qti-distro-fullstack-debug/tmp-glibc/deploy/ipk/aarch64/spcam_0.0-r0_aarch64.ipk \
-  /mnt/tmp/zjycode/jax/LE.PRODUCT.11.0/apps_proc/build-qti-distro-fullstack-debug/tmp-glibc/deploy/ipk/aarch64/spcam-dev_0.0-r0_aarch64.ipk \
-  /tmp/
-
-adb shell "opkg install --force-reinstall --force-overwrite --force-depends \
-  /tmp/spcam_0.0-r0_aarch64.ipk /tmp/spcam-dev_0.0-r0_aarch64.ipk"
-
+adb push <build-output>/*.ipk /tmp/
+adb shell "opkg install --force-reinstall --force-overwrite --force-depends /tmp/*.ipk"
 # 重启服务
-adb shell "killall -9 spcam_main_server 2>/dev/null; sleep 1; systemctl start spcam.service"
+adb shell "killall -9 <service-name>; systemctl start <service>.service"
 ```
 
 ---
