@@ -231,6 +231,13 @@ adb shell "killall -9 <service-name>; systemctl start <service>.service"
 
 ## Commit 操作（仅用户确认后执行）
 
+> **快速路径**：若用户已同时满足以下三条，则跳过再次询问，直接进入 fetch → status → 填写模板流程：
+> 1. 用户已说明"编译通过"
+> 2. 用户已说明"设备测试通过"
+> 3. 用户明确说"可以提交"
+>
+> 无需再次询问"测试是否通过"——直接执行下方操作步骤。
+
 ### 第一步：commit 前必须 fetch 检查远端状态
 
 ```bash
@@ -342,6 +349,55 @@ git format-patch <from-commit>..<to-commit>
 
 # 应用 patch
 git am <patch-file>
+
+# 撤销误 add（只取消 stage，不丢失文件内容）
+git restore --staged <file>   # 推荐（Git 2.23+）
+# 或等效旧写法
+git reset HEAD <file>
+
+# ⚠️ 注意区分（下面这条会真正丢弃工作区改动，不可恢复！）
+git restore <file>            # 丢弃工作区修改（慎用）
+```
+
+---
+
+## Cherry-pick 到其他分支（必须通过 PR，禁止直接 push main）
+
+> ⚠️ **禁止直接 `git push origin main`**。cherry-pick 后必须走 PR/code review 流程合并。
+
+### 操作步骤
+
+```bash
+# Step 1：确认要 cherry-pick 的 commit hash
+git log --oneline -10
+
+# Step 2：切到目标分支（询问用户确认目标分支）
+git checkout main
+git pull origin main          # 拉最新，避免落后
+
+# Step 3：执行 cherry-pick
+git cherry-pick <commit-hash>
+
+# 若发生冲突，按冲突解决流程处理
+# 解决完毕后：
+git add <resolved-file>
+git cherry-pick --continue
+```
+
+### 强制步骤（不可跳过）
+
+1. **询问用户**：确认目标分支是否就是 main，还是其他分支
+2. **cherry-pick 后必须重新编译验证**（代码已变，必须确认编译通过）
+3. **禁止直接 push main**，push 到临时分支后通过 PR 合并
+
+```bash
+# cherry-pick 后 push（禁止直接 push main）
+git push origin main           # ❌ 禁止！
+
+# 正确做法：确认当前在 feature 分支，push 后创建 PR
+BRANCH=$(git branch --show-current)
+git push origin $BRANCH        # ✅ push 到当前 feature 分支
+# 然后在代码平台创建 PR 合并至 main
 ```
 
 ---
