@@ -608,3 +608,12 @@ Push 前自查:
 - [ ] 若远端有新提交，已执行 Pull+Rebase 流程并重新编译验证?
 - [ ] 用户明确说"可以推送"?
 ```
+
+---
+
+## 参考文档
+
+| 主题 | 路径 |
+|------|------|
+| Cherry-pick 与回退操作 | `references/cherry-pick-guide.md` |
+| Git Bisect & Reflog | `references/bisect-reflog-guide.md` |
